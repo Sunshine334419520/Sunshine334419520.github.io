@@ -1,4 +1,5 @@
 # Site settings
+baseurl : /
 title: BY Blog
 SEOTitle: 柏荧的博客 | BY Blog
 header-img: img/post-bg-desk.jpg
