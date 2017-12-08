@@ -3,7 +3,7 @@
 # @Email:  guang334419520@126.com
 # @Filename: _config.yml
 # @Last modified by:   sunshine
-# @Last modified time: 2017-12-08T13:32:25+08:00
+# @Last modified time: 2017-12-08T13:42:49+08:00
 
 
 
@@ -21,7 +21,7 @@ github_repo: "https://github.com/Sunshine334419520/Sunshine334419520.github.io.g
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
 sidebar-about-description: "Goals determine what you going to be!"
-sidebar-avatar: /img/about-BY-gentle.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-avatar: /img/Headportrait.jpeg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
