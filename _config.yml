@@ -3,14 +3,14 @@
 # @Email:  guang334419520@126.com
 # @Filename: _config.yml
 # @Last modified by:   sunshine
-# @Last modified time: 2017-12-08T16:19:31+08:00
+# @Last modified time: 2017-12-08T17:01:29+08:00
 
 
 
 # Site settings
 title: YG Blog
 SEOTitle: 杨光的博客 | YG Blog
-header-img: img/post-bg-desk.jpg
+header-img: img/home-bg-o.jpg
 email: guang334419520@126.com
 description: "Every failure is leading towards success."
 keyword: "YG, YG Blog, 杨光的博客, sunshine, 杨光, C/C++, Linux, iPhone"
@@ -28,9 +28,9 @@ sidebar-avatar: /img/Headportrait.jpeg      # use absolute URL, seeing it's used
 # SNS settings
 RSS: false
 # weibo_username:     qiubaiying
-zhihu_username:     阳光
+zhihu_username:     yang-guang-28-33-95
 github_username:    Sunshine334419520
-facebook_username:  https://github.com/Sunshine334419520
+facebook_username:
 jianshu_username:   e71990ada2fd
 #twitter_username:   qiubaiying
 
