@@ -3,17 +3,17 @@
 # @Email:  guang334419520@126.com
 # @Filename: _config.yml
 # @Last modified by:   sunshine
-# @Last modified time: 2017-12-08T13:42:49+08:00
+# @Last modified time: 2017-12-08T16:19:31+08:00
 
 
 
 # Site settings
-title: My Blog
-SEOTitle: 杨光的博客 | By Blog
+title: YG Blog
+SEOTitle: 杨光的博客 | YG Blog
 header-img: img/post-bg-desk.jpg
 email: guang334419520@126.com
 description: "Every failure is leading towards success."
-keyword: "BY, BY Blog, 杨光的博客, sunshine, 杨光, iOS, Apple, iPhone"
+keyword: "YG, YG Blog, 杨光的博客, sunshine, 杨光, C/C++, Linux, iPhone"
 url: "http://yang8guang.com"          # your host, for absolute URL
 baseurl: ""      # for example, '/blog' if your blog hosted on 'host/blog'
 github_repo: "https://github.com/Sunshine334419520/Sunshine334419520.github.io.git" # you code repository
@@ -28,9 +28,9 @@ sidebar-avatar: /img/Headportrait.jpeg      # use absolute URL, seeing it's used
 # SNS settings
 RSS: false
 # weibo_username:     qiubaiying
-zhihu_username:     qiubaiying
-github_username:    qiubaiying
-facebook_username:  baiying.qiu.7
+zhihu_username:     阳光
+github_username:    Sunshine334419520
+facebook_username:  https://github.com/Sunshine334419520
 jianshu_username:   e71990ada2fd
 #twitter_username:   qiubaiying
 
@@ -81,8 +81,8 @@ disqus_username: qiubaiying
 ba_track_id: b50bf2b12b5338a1845e33832976fd68
 
 # Google Analytics
-ga_track_id: 'UA-90855596-1'            # Format: UA-xxxxxx-xx
-ga_domain: auto
+ga_track_id: 'UA-110935049-1'            # Format: UA-xxxxxx-xx
+ga_domain: www.yang8guang.com
 
 
 
