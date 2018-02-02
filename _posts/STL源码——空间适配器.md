@@ -1,0 +1,457 @@
+---
+layout:     post
+title:      STL源码 - 空间适配器
+subtitle:   
+date:       2018-1-31
+author:     YangGuang
+header-img: img/post-bg-c++mysql.jpg
+catalog: true
+tags:
+    - C++
+    - STL
+---
+> STL 源码 -> alloc
+
+# 前言
+最近在看STL源码，第一大组件就是空间适配器。
+
+## 什么是空间适配器？
+
+其实简单点说它就是帮你管理内存的，那为什么不叫它内存适配器？因为空间不一定是内存，空间也可以是磁盘等..., 没错它还可以在磁盘上申请空间。
+
+涉及到二个文件，一个 <stl_construct.h> 用来构造对象，以及析构对象。另一个 <stl_alloc.h> 用来申请内存以及释放内存.
+
+## 构造与析构管理
+
+>首先说这个之前你需要了解C++到new包涵来两阶段操作
+
+  ```c++
+    class Foo {};
+    Foo *pf = new Foo;
+    delete pf;
+  ```
+ 1）::operator new 申请内存
+
+ 2）调用Foo::Foo() （调用构造器）
+
+ > delete 也包涵两个阶段
+
+ 1) Foo::~Foo() (调用析构器)
+
+ 2）::operator delete 释放内存
+
+ stl_construct 文件就是调用析构器和构造器到， 这个文件到内容比较简单，我把我写到一个简单到版本放在上面。
+
+  ```c++
+
+
+
+#include <new>
+
+__STL_SIMPLE_BEGIN_NAMESPACE    //namespace name
+
+// Call The destructor
+template <class T>
+inline void Destroy(T *pointer)
+{
+  pointer->~T();
+}
+
+// Call The Constructor
+template <class T1, class T2>
+inline void Construct(T1 *pointer, T2 &value)
+{
+  new (pointer) T(value);
+}
+
+// another version of Destroy, receive two Iterator.
+template <class ForwordIterator>
+inline void Destroy(ForwordIterator first, ForwordIterator last)
+{
+  __destroy(first, last, value_type(first));
+}
+
+//judge the type
+template <class ForwordIterator, class T>
+inline void __destroy(ForwordIterator first, ForwordIterator last, T*)
+{
+  typedef typename type_traits<T>::has_trivial_destructor trivial_destructor;
+
+  __destroy_aux(first, last, trivial_destructor());
+}
+
+//value type have non-trivial destructor
+template <class ForwordIterator>
+inline void
+__destroy_aux(ForwordIterator first, ForwordIterator last, false_type)
+{
+  while (first != last) {
+    Destroy(&*first);
+    first++;
+  }
+}
+
+// value type have trivial destructor
+template <class ForwordIterator>
+inline void
+__destroy_aux(ForwordIterator first, ForwordIterator last, true_type)
+{
+}
+
+// specialized version of the Destroy, For Iterator is char*, char*
+__STL_TEMPLATE_NULL
+inline void Destroy(char*, char*)
+{
+}
+
+// specialized version of the Destroy, For Iterator is w_char_t*, w_char_t*
+__STL_TEMPLATE_NULL
+inline void Destroy(wchar_t*, wchar_t*)
+{
+}
+
+__STL_SIMPLE_END_NAMESPACE
+#endif
+
+  ```
+
+## 空间到配置与释放， std::alloc
+
+对象构造前到空间配置和对象析构后到空间释放，由 <stl_allo.h>负责，SGI 设计哲学：
+
+- 向 system heap 请求空间。
+- 考虑多线程状态。
+- 考虑内存不足时到应对措施
+- 考虑过多“小型区块”可能造成到内存碎片问题。
+
+  内存的配置采用了C的malloc() 和 free(),并没有用C++的基本操作::operator new()....
+
+  **SGI—STL设计了两层级适配器，当配置区块大于128bytes时采用第一级配置器，否则第二级.**
+
+
+## 第一级配置器
+  ```c++
+#if 0
+#include <new>
+#define __THROW_BAD_ALLOC throw bad_alloc
+#else
+# include <iostream>
+# define __THROW_BAD_ALLOC std::cerr << "out of memory" << std::endl; \
+         exit(1)
+#endif
+
+#include <cstdlib>
+#include <cstring>
+#include "config.h"
+
+__STL_SIMPLE_BEGIN_NAMESPACE
+//namespace simple_stl {
+
+template <int inst>
+class MallocAlloc {
+public:
+typedef void (*new_handler)();
+public:
+static void* Allocate(size_t n)
+{
+  void *result = malloc(n);
+
+  if (result == 0) {
+    result = oom_malloc(n);
+  }
+  return result;
+}
+
+static void Deallocate(void *ptr, size_t /* n */)
+{
+  free(ptr);
+}
+
+static void* Reallocate(void *ptr, size_t old_size, size_t new_size)
+{
+  void *result = realloc(ptr, new_size);
+  if (0 == result) result = oom_realloc(ptr, new_size);
+
+  return result;
+}
+
+static new_handler set_malloc_handler(new_handler f)
+{
+  new_handler old = __malloc__alloc_oom_handler;
+  __malloc__alloc_oom_handler = f;
+  return old;
+}
+
+private:
+static void* oom_malloc(size_t);
+static void* oom_realloc(void*, size_t);
+static new_handler __malloc__alloc_oom_handler;
+};
+
+template <int inst>
+typename MallocAlloc<inst>::new_handler           \
+MallocAlloc<inst>::__malloc__alloc_oom_handler = 0;
+
+template <int inst>
+void* MallocAlloc<inst>::oom_malloc(size_t n)
+{
+new_handler my_malloc_handler;
+void *result = 0;
+
+for (; ;) {
+  my_malloc_handler = __malloc__alloc_oom_handler;
+  if (0 == my_malloc_handler) { __THROW_BAD_ALLOC; }
+
+  (*my_malloc_handler)();
+  result = malloc(n);
+  if (result != 0) return result;
+}
+}
+
+template <int inst>
+void* MallocAlloc<inst>::oom_realloc(void * ptr, size_t n)
+{
+new_handler my_realloc_handler;
+void *result = 0;
+
+for (; ;) {
+  my_realloc_handler = __malloc__alloc_oom_handler;
+  if(0 == my_realloc_handler) { __THROW_BAD_ALLOC; }
+
+  (*my_realloc_handler)();
+  result = realloc(ptr, n);
+  if(result != 0) return result;
+}
+}
+
+
+typedef MallocAlloc<0> malloc_alloc;
+
+```
+
+  第一级配置器直接用malloc(), free(), realloc()来执行内存的配置操作，而且还实现了一个C++ new-handler 机制，来让用户处理内存不足的情况，用户只需要实现相对的回调函数即可。回调函数原型 "void (* set_malloc_handler)()".如果用户没由设定这个函数，出现内存不足时，将回抛出bad_alloc异常，然后调用exit(1)终止程序。
+
+## 第二级配置器
+  第二级设配器维持了一个链表数据结构，用来管理内存的分配，所有内存的分配全部都是8的倍数。
+
+  ```c++
+    union obj {
+      union obj * free_list_link;
+      char client_data[1];
+    };
+  ```
+
+  这个obj是一个union而不是一个struct,把这个链表定义为union的原因是节省内存，本来就是一个内存分配与释放的数据结构，那肯定得节约任何内存。
+
+  这个链表保存16个元素，从8-128bytes
+
+  ```c++
+template <int inst>
+class DefaultAlloc {
+public:
+static void* Allocate(size_t n);
+static void  Deallocate(void *ptr, size_t n);
+static void* Reallocate(void *ptr, size_t old_sz, size_t new_sz);
+private:
+enum {__ALIGN = 8};
+enum {__MAX_BYTES = 128};
+enum {__NFRELISTS = __MAX_BYTES / __ALIGN};
+private:
+union obj {
+  union obj *free_list_link;
+  char client_data[1];
+};
+private:
+static size_t ROUND_UP(size_t bytes)
+{
+  return ( (bytes) + __ALIGN - 1) & ~(__ALIGN - 1);
+}
+
+static size_t FREELIST_INDEX(size_t bytes)
+{
+  return (bytes + __ALIGN - 1) / __ALIGN - 1;
+}
+private:
+static void* refill(size_t n);
+static char* chunk_alloc(size_t size, int &nobjs);
+
+private:
+static obj * volatile free_list[__NFRELISTS];
+static char *start_free;
+static char *end_free;
+static size_t heap_size;
+};
+
+template<int inst>
+char * DefaultAlloc<inst>::start_free = 0;
+
+template <int inst>
+char * DefaultAlloc<inst>::end_free = 0;
+
+template <int inst>
+size_t DefaultAlloc<inst>::heap_size = 0;
+
+template <int inst>
+typename DefaultAlloc<inst>::obj* volatile      \
+DefaultAlloc<inst>::free_list[__NFRELISTS] =    \
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+```
+
+#### 空间配置函数allocate()
+ 这个函数首先判断区块大小，如果大于128bytes就调用第一配置器，小于128就查看对应的free list， 如果free list 有可用的就直接取，否则调用refill重新填充空间。
+
+ ```c++
+ template <int inst>
+void* DefaultAlloc<inst>::Allocate(size_t n)
+{
+  obj * volatile * my_free_list;
+  obj *result = 0;
+
+  if (n > __MAX_BYTES) {
+    return malloc_alloc::Allocate(n);
+  }
+
+  my_free_list = free_list + FREELIST_INDEX(n);
+  result = *my_free_list;
+
+  if (0 == result) {
+    void *r = refill(ROUND_UP(n));
+    return r;
+  }
+
+  *my_free_list = result->free_list_link;
+
+  return result;
+}
+
+```
+
+#### 空间释放函数dllocate()
+ 这个函数首先判断区块大小，如果大于128bytes就调用第一配置器，小于128就查看对应的free list, 然后将期收回
+
+ ```c++
+ template <int inst>
+void DefaultAlloc<inst>::Deallocate(void *ptr, size_t n)
+{
+  obj * volatile * my_free_list;
+  obj *p = static_cast<obj *>(ptr);
+
+  if (n > __MAX_BYTES) {
+    malloc_alloc::Deallocate(p, n);
+    return ;
+  }
+
+  my_free_list = free_list + FREELIST_INDEX(n);
+  p->free_list_link = *my_free_list;
+  *my_free_list = p;
+}
+
+```
+
+#### refill()
+
+当调用allocate()发现没有可用区块时，就会调用refill()，refill()将会从内存池（等下讲）中取（由chunk_allco（）完成）。
+
+```c++
+template <int inst>
+void* DefaultAlloc<inst>::refill(size_t n)
+{
+  int nobjs = 20;
+
+  char * chunk = chunk_alloc(n, nobjs);
+
+  obj * volatile * my_free_list;
+  obj * result;
+  obj * current_obj, * next_obj;
+
+  if (1 == nobjs) {
+    return chunk;
+  }
+
+  my_free_list = free_list + FREELIST_INDEX(n);
+  result = (obj*)chunk;
+
+  *my_free_list = next_obj = (obj*)(chunk + n);
+
+  for (int i = 1; ; i++) {
+    current_obj = next_obj;
+    next_obj = (obj*)( (char*)current_obj + n);
+
+    if (i == nobjs -1) {
+      current_obj->free_list_link = 0;
+      break;
+    }
+
+    current_obj->free_list_link = next_obj;
+  }
+
+  return result;
+}
+
+```
+
+#### 内存池(memory pool)
+首先chunk_alloc会检查内存池剩余空间是否能够完全满足需求量，如果满足就直接分配给他们，然后调整内存池。如果内存池只能满足一个以上的区块，就将这些区块分配出去，如果内存池一个区块都不能满足，首先要处理调内存池中的残余零头把分配给适当的区块，然后调用malloc()给内存池申请空间，如果heap空间不足，malloc失败，就从已有区块上拿取空间，实在是没有空间了，就会调用第一级配置器。
+
+```c++
+template <int inst>
+char* DefaultAlloc<inst>::chunk_alloc(size_t size, int &nobjs)
+{
+  size_t total_bytes = size * nobjs;
+  size_t bytes_left = end_free - start_free;
+  char * result;
+
+  if (bytes_left >= total_bytes) {
+    result = start_free;
+    start_free += total_bytes;
+
+    return result;
+  } else if (bytes_left >= size) {
+    result = start_free;
+    nobjs = bytes_left / size;
+    total_bytes = size * nobjs;
+    start_free += total_bytes;
+
+    return result;
+  } else {
+    size_t bytes_to_get = 2 * total_bytes + ROUND_UP(heap_size >> 4);
+
+    if (bytes_left > 0) {
+      obj * volatile * my_free_list;
+
+      my_free_list = free_list + FREELIST_INDEX(bytes_left);
+      ( (obj*)start_free)->free_list_link = *my_free_list;
+      *my_free_list = (obj*)start_free;
+    }
+
+    start_free = (char*)malloc(bytes_to_get);
+
+    if (0 == start_free) {
+      obj * volatile * my_free_list, *p;
+
+      for (int i = size; i <= __MAX_BYTES; i += __ALIGN) {
+          my_free_list = free_list + FREELIST_INDEX(i);
+          p = *my_free_list;
+
+          if(0 != p) {
+            *my_free_list = p->free_list_link;
+            start_free = (char*)p;
+            end_free = start_free + i;
+
+            return chunk_alloc(size, nobjs);
+          }
+
+      }
+      end_free = 0;
+      start_free = (char*)malloc_alloc::Allocate(bytes_to_get);
+    }
+
+    heap_size += bytes_to_get;
+    end_free = start_free + bytes_to_get;
+
+    return chunk_alloc(size, nobjs);
+  }
+}
+
+```
