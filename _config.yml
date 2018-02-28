@@ -3,7 +3,7 @@
 # @Email:  guang334419520@126.com
 # @Filename: _config.yml
 # @Last modified by:   sunshine
-# @Last modified time: 2018-02-16T19:39:18+08:00
+# @Last modified time: 2018-02-28T18:08:38+08:00
 
 
 
@@ -21,7 +21,7 @@ github_repo: "https://github.com/Sunshine334419520/Sunshine334419520.github.io.g
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
 sidebar-about-description: "Goals determine what you going to be!"
-sidebar-avatar: /img/Headportrait.jpeg      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-avatar: /img/TouXiang.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
@@ -31,7 +31,7 @@ RSS: false
 zhihu_username:     yang-guang-28-33-95
 github_username:    Sunshine334419520
 facebook_username:
-jianshu_username:   __阳光_
+jianshu_username:   4f3ea9319d92
 #twitter_username:   qiubaiying
 
 
